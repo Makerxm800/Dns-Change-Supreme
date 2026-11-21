@@ -1,0 +1,56 @@
+appId: com.makerxm800.dnschangesupreme
+productName: DNS Change Supreme
+copyright: Copyright © 2026 Makerxm800
+directories:
+  output: release
+  buildResources: build
+files:
+  - dist/**/*
+  - electron/**/*
+  - build/icon.png
+  - build/tray-icon.png
+  - public/icon.png
+  - package.json
+asar: true
+asarUnpack:
+  - build/**
+win:
+  icon: build/icon.png
+  requestedExecutionLevel: asInvoker
+  target:
+    - target: nsis
+      arch:
+        - x64
+        - arm64
+    - target: portable
+      arch:
+        - x64
+nsis:
+  artifactName: DNS-Change-Supreme-Setup-${version}.${ext}
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: DNS Change Supreme
+portable:
+  artifactName: DNS-Change-Supreme-Portable-${version}-${arch}.exe
+mac:
+  icon: build/icon.png
+  category: public.app-category.utilities
+  darkModeSupport: true
+  target:
+    - target: dmg
+      arch:
+        - x64
+        - arm64
+    - target: zip
+      arch:
+        - x64
+        - arm64
+dmg:
+  title: DNS Change Supreme ${version}
+  artifactName: DNS-Change-Supreme-${version}-${arch}.dmg
+publish:
+  provider: github
+  owner: Makerxm800
+  repo: Dns-Change-Supreme
