@@ -16,9 +16,9 @@
     "dev:vite": "vite --host 0.0.0.0 --port 5173",
     "electron:dev": "concurrently -k \"npm:dev:vite\" \"wait-on http://localhost:5173 && electron .\"",
     "build": "vite build",
-    "build:win": "vite build && electron-builder --win",
-    "build:mac": "vite build && electron-builder --mac",
-    "build:all": "vite build && electron-builder --win --mac",
+    "build:win": "vite build && electron-builder --win --publish never",
+    "build:mac": "vite build && electron-builder --mac --publish never",
+    "build:all": "vite build && electron-builder --win --mac --publish never",
     "preview": "node server/apiServer.js --serve-dist",
     "test": "node --test tests/dnsEngine.test.mjs"
   },
