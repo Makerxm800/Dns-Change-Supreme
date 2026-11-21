@@ -1,4 +1,4 @@
-# DNS Change Supreme
+# DNS Changer Pro
 
 A modern, cross-platform desktop **DNS Changer** for **Windows (`.exe`)** and **macOS (`.dmg` / `.app`)** built with Electron, React, TypeScript, and Tailwind CSS.
 
