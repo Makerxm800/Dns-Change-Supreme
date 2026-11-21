@@ -38,6 +38,7 @@ mac:
   icon: build/icon.png
   category: public.app-category.utilities
   darkModeSupport: true
+  identity: null
   target:
     - target: dmg
       arch:
@@ -48,6 +49,7 @@ mac:
         - x64
         - arm64
 dmg:
+  sign: false
   title: DNS Change Supreme ${version}
   artifactName: DNS-Change-Supreme-${version}-${arch}.dmg
 publish:
