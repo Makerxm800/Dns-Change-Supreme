@@ -213,6 +213,6 @@ if (isDirectRun) {
   const port = Number(process.env.PORT || (process.argv.includes('--serve-dist') ? 4173 : 38420));
   const app = createApiServer();
   app.listen(port, '0.0.0.0', () => {
-    console.log(`DNS Change Supreme API server listening on http://0.0.0.0:${port}`);
+    console.log(`DNS Changer Pro API server listening on http://0.0.0.0:${port}`);
   });
 }

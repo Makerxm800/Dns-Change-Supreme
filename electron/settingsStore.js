@@ -30,9 +30,9 @@ export const DEFAULT_SETTINGS = {
   showIpv6InList: true,
   defaultRegion: 'All',
 
-  // Git / Updates
+  // App Updates
   gitRepoOwner: 'Makerxm800',
-  gitRepoName: 'Dns-Change-Supreme',
+  gitRepoName: 'Dns-Changer-Pro',
   gitBranch: 'main',
   autoCheckUpdates: true,
 };
@@ -47,7 +47,7 @@ export const DEFAULT_STATE = {
 };
 
 export function createStore(storageDir) {
-  const dir = storageDir || path.join(os.homedir(), '.dns-change-supreme');
+  const dir = storageDir || path.join(os.homedir(), '.dns-changer-pro');
   const filePath = path.join(dir, 'config.json');
 
   function ensureDir() {
@@ -65,13 +65,18 @@ export function createStore(storageDir) {
       }
       const raw = fs.readFileSync(filePath, 'utf8');
       const parsed = JSON.parse(raw);
+      const mergedSettings = {
+        ...DEFAULT_SETTINGS,
+        ...(parsed.settings || {}),
+      };
+      // Migrate renamed repo automatically if user had previous v2.0.0 config
+      if (mergedSettings.gitRepoName === 'Dns-Change-Supreme') {
+        mergedSettings.gitRepoName = 'Dns-Changer-Pro';
+      }
       return {
         ...DEFAULT_STATE,
         ...parsed,
-        settings: {
-          ...DEFAULT_SETTINGS,
-          ...(parsed.settings || {}),
-        },
+        settings: mergedSettings,
         favorites: Array.isArray(parsed.favorites) ? parsed.favorites : DEFAULT_STATE.favorites,
         customServers: Array.isArray(parsed.customServers) ? parsed.customServers : [],
         logs: Array.isArray(parsed.logs) ? parsed.logs.slice(0, 200) : [],

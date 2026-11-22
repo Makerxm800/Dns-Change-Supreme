@@ -26,6 +26,7 @@ declare global {
       appendLog: (entry: Partial<LogEntry>) => Promise<LogEntry>;
       checkGitUpdates: (opts?: any) => Promise<GitUpdateCheckResult>;
       applyGitUpdate: (opts?: any) => Promise<any>;
+      onUpdateProgress?: (cb: (data: { downloadedBytes: number; totalBytes: number; percent: number | null }) => void) => () => void;
       openExternal: (url: string) => Promise<void>;
       relaunchApp: () => Promise<void>;
     };
@@ -137,6 +138,13 @@ export const bridge = {
   async applyGitUpdate(opts?: { owner?: string; repo?: string; branch?: string }) {
     if (window.dnsApi) return window.dnsApi.applyGitUpdate(opts);
     return apiFetch('/api/git/update', { method: 'POST', body: JSON.stringify(opts || {}) });
+  },
+
+  onUpdateProgress(cb: (data: { downloadedBytes: number; totalBytes: number; percent: number | null }) => void): () => void {
+    if (window.dnsApi?.onUpdateProgress) {
+      return window.dnsApi.onUpdateProgress(cb);
+    }
+    return () => {};
   },
 
   async openExternal(url: string) {

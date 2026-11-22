@@ -1,6 +1,6 @@
-appId: com.makerxm800.dnschangesupreme
-productName: DNS Change Supreme
-copyright: Copyright © 2026 Makerxm800
+appId: com.dnschangerpro.app
+productName: DNS Changer Pro
+copyright: Copyright © 2026 DNS Changer Pro
 directories:
   output: release
   buildResources: build
@@ -26,14 +26,14 @@ win:
       arch:
         - x64
 nsis:
-  artifactName: DNS-Change-Supreme-Setup-${version}.${ext}
+  artifactName: DNS-Changer-Pro-Setup-${version}.${ext}
   oneClick: false
   allowToChangeInstallationDirectory: true
   createDesktopShortcut: true
   createStartMenuShortcut: true
-  shortcutName: DNS Change Supreme
+  shortcutName: DNS Changer Pro
 portable:
-  artifactName: DNS-Change-Supreme-Portable-${version}-${arch}.exe
+  artifactName: DNS-Changer-Pro-Portable-${version}-${arch}.exe
 mac:
   icon: build/icon.png
   category: public.app-category.utilities
@@ -50,9 +50,9 @@ mac:
         - arm64
 dmg:
   sign: false
-  title: DNS Change Supreme ${version}
-  artifactName: DNS-Change-Supreme-${version}-${arch}.dmg
+  title: DNS Changer Pro ${version}
+  artifactName: DNS-Changer-Pro-${version}-${arch}.dmg
 publish:
   provider: github
   owner: Makerxm800
-  repo: Dns-Change-Supreme
+  repo: Dns-Changer-Pro

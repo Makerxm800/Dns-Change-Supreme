@@ -61,20 +61,21 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const connectedAdapters = adapters.filter((a) => a.status === 'Connected');
   const favoriteServers = servers.filter((s) => favorites.includes(s.id)).slice(0, 6);
   const activeLatency = activeServer ? latencies[activeServer.primary] : null;
+  const primaryAdapter = connectedAdapters.find((a) => a.isPrimary) || connectedAdapters[0];
 
   const cardBg = isLight
     ? 'bg-white border-slate-200 text-slate-900 shadow-sm'
     : 'bg-slate-900/70 border-slate-800 text-slate-100';
 
   return (
-    <div className="space-y-6">
+    <div className="animate-tab-enter space-y-6">
       {/* Hero Connection Banner */}
       <div
-        className={`relative overflow-hidden rounded-2xl border p-6 transition-all ${
+        className={`relative overflow-hidden rounded-2xl border p-6 transition-all duration-300 ${
           activeServer
             ? isLight
-              ? 'bg-gradient-to-br from-emerald-50 via-white to-sky-50 border-emerald-200'
-              : 'bg-gradient-to-br from-emerald-950/50 via-slate-900 to-sky-950/40 border-emerald-500/35'
+              ? 'bg-gradient-to-br from-emerald-50 via-white to-sky-50 border-emerald-200 shadow-lg shadow-emerald-500/5'
+              : 'bg-gradient-to-br from-emerald-950/50 via-slate-900 to-sky-950/40 border-emerald-500/35 shadow-xl shadow-emerald-500/5'
             : isLight
               ? 'bg-gradient-to-br from-slate-50 via-white to-sky-50 border-slate-200'
               : 'bg-gradient-to-br from-slate-900 via-slate-900 to-indigo-950/40 border-slate-800'
@@ -83,13 +84,17 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="flex items-start gap-4">
             <div
-              className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 shadow-lg ${
+              className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 shadow-lg transition-transform duration-300 hover:scale-105 ${
                 activeServer
                   ? 'bg-emerald-500 text-slate-950 shadow-emerald-500/25'
                   : 'bg-slate-800 text-amber-400 border border-slate-700'
               }`}
             >
-              {activeServer ? <ShieldCheck className="w-8 h-8" /> : <ShieldOff className="w-8 h-8" />}
+              {activeServer ? (
+                <ShieldCheck className="w-8 h-8 animate-icon-bob" />
+              ) : (
+                <ShieldOff className="w-8 h-8" />
+              )}
             </div>
 
             <div className="space-y-1.5">
@@ -131,10 +136,11 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                       </h2>
                       <p className="text-xs text-slate-400">
                         {activeServer.countryName} · {activeServer.region}
+                        {activeServer.city ? ` · ${activeServer.city}` : ''}
                       </p>
                     </div>
                   </div>
-                  <div className="flex flex-wrap items-center gap-3 pt-1 text-xs font-mono">
+                  <div className="flex flex-wrap items-center gap-2 pt-1 text-xs font-mono">
                     <span className="px-2.5 py-1 rounded-lg bg-slate-950/60 border border-slate-700/60 text-sky-300">
                       Primary: {activeServer.primary}
                     </span>
@@ -174,7 +180,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                 }}
                 disabled={busy}
                 data-testid="quick-connect-btn"
-                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm shadow-lg shadow-emerald-500/25 transition disabled:opacity-50"
+                className="btn-press inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm shadow-lg shadow-emerald-500/25 disabled:opacity-50"
               >
                 <Zap className="w-4 h-4" />
                 Quick Connect (1.1.1.1)
@@ -184,7 +190,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                 onClick={onResetDns}
                 disabled={busy}
                 data-testid="hero-reset-btn"
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/30 font-semibold text-xs transition disabled:opacity-50"
+                className="btn-press inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/30 font-semibold text-xs disabled:opacity-50"
               >
                 <RotateCcw className="w-4 h-4" />
                 Restore ISP / DHCP
@@ -195,7 +201,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               onClick={onFlushCache}
               disabled={busy}
               data-testid="hero-flush-btn"
-              className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border font-semibold text-xs transition disabled:opacity-50 ${
+              className={`btn-press inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border font-semibold text-xs disabled:opacity-50 ${
                 isLight
                   ? 'bg-white hover:bg-slate-100 border-slate-300 text-slate-700'
                   : 'bg-slate-800/80 hover:bg-slate-700 border-slate-700 text-slate-200'
@@ -207,10 +213,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
             <button
               onClick={() => onGoToTab('servers')}
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs transition"
+              className="group btn-press inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs shadow-lg shadow-sky-500/20"
             >
               Browse All Regions
-              <ArrowRight className="w-4 h-4" />
+              <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-0.5" />
             </button>
           </div>
         </div>
@@ -218,27 +224,33 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
       {/* System Summary Strip */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-        <div className={`rounded-2xl border p-4 ${cardBg}`}>
+        <button
+          onClick={() => onGoToTab('system')}
+          className={`card-hover rounded-2xl border p-4 text-left ${cardBg}`}
+        >
           <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
             <span>Active Network Adapters</span>
             <Wifi className="w-4 h-4 text-sky-400" />
           </div>
           <div className="text-xl font-bold">{connectedAdapters.length} Connected</div>
           <div className="text-xs text-slate-400 truncate mt-0.5">
-            Scope: {settings.adapterScope === 'connected' ? 'All Connected' : settings.adapterScope}
+            {primaryAdapter ? `${primaryAdapter.name} · ${primaryAdapter.ipAddress}` : `Scope: ${settings.adapterScope}`}
           </div>
-        </div>
+        </button>
 
-        <div className={`rounded-2xl border p-4 ${cardBg}`}>
+        <button
+          onClick={() => onGoToTab('servers')}
+          className={`card-hover rounded-2xl border p-4 text-left ${cardBg}`}
+        >
           <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
             <span>Global DNS Directory</span>
             <Globe className="w-4 h-4 text-emerald-400" />
           </div>
           <div className="text-xl font-bold">{servers.length} Servers</div>
           <div className="text-xs text-slate-400 mt-0.5">6 World Regions · Real Flags</div>
-        </div>
+        </button>
 
-        <div className={`rounded-2xl border p-4 ${cardBg}`}>
+        <div className={`card-hover rounded-2xl border p-4 ${cardBg}`}>
           <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
             <span>System Protection</span>
             <CheckCircle2 className="w-4 h-4 text-indigo-400" />
@@ -257,15 +269,15 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
         <button
           onClick={() => onOpenSettings('system')}
-          className={`rounded-2xl border p-4 text-left transition hover:border-sky-500/50 ${cardBg}`}
+          className={`group card-hover rounded-2xl border p-4 text-left hover:border-sky-500/50 ${cardBg}`}
         >
           <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
-            <span>System Settings</span>
-            <Settings className="w-4 h-4 text-sky-400" />
+            <span>System Engine</span>
+            <Settings className="w-4 h-4 text-sky-400 transition-transform duration-300 group-hover:rotate-90" />
           </div>
-          <div className="text-base font-bold text-sky-400">Open Settings Popup</div>
+          <div className="text-base font-bold text-sky-400">Configure Settings</div>
           <div className="text-xs text-slate-400 mt-0.5">
-            Startup, Tray, IPv6, Git Updates
+            Startup, Tray, IPv6, Updates
           </div>
         </button>
       </div>
@@ -284,9 +296,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           </div>
           <button
             onClick={() => onGoToTab('benchmark')}
-            className="text-xs font-semibold text-sky-400 hover:text-sky-300 flex items-center gap-1"
+            className="group text-xs font-semibold text-sky-400 hover:text-sky-300 flex items-center gap-1 transition"
           >
-            Run Speed Test <ArrowRight className="w-3.5 h-3.5" />
+            Run Speed Test{' '}
+            <ArrowRight className="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
           </button>
         </div>
 
@@ -297,10 +310,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             return (
               <div
                 key={s.id}
-                className={`rounded-2xl border p-4 flex flex-col justify-between gap-3 transition ${
+                className={`card-hover rounded-2xl border p-4 flex flex-col justify-between gap-3 ${
                   isActive
                     ? 'border-emerald-500/60 bg-emerald-500/10 ring-1 ring-emerald-500/30'
-                    : `${cardBg} hover:border-sky-500/40`
+                    : `${cardBg} hover:border-sky-500/45`
                 }`}
               >
                 <div className="flex items-start justify-between gap-2">
@@ -315,7 +328,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                   </div>
                   <button
                     onClick={() => onToggleFavorite(s.id)}
-                    className="p-1 rounded-lg text-amber-400 hover:bg-slate-800/50"
+                    className="p-1.5 rounded-lg text-amber-400 hover:bg-slate-800/50 active:scale-90 transition-all"
                     title="Remove from favorites"
                   >
                     <Star className="w-4 h-4 fill-amber-400" />
@@ -326,29 +339,27 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                   <span className="text-sky-400">{s.primary} / {s.secondary}</span>
                   <button
                     onClick={() => onPingServer(s)}
-                    className={`px-2 py-0.5 rounded-md border ${
+                    className={`btn-press px-2.5 py-0.5 rounded-md border ${
                       lat?.ok
                         ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400'
-                        : 'bg-slate-800/60 border-slate-700 text-slate-400 hover:text-white'
+                        : 'bg-slate-800/60 border-slate-700 text-slate-300 hover:border-sky-500'
                     }`}
                   >
                     {lat ? (lat.ok ? `${lat.latencyMs} ms` : 'Timeout') : 'Ping'}
                   </button>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => onApplyServer(s)}
-                    disabled={busy || isActive}
-                    className={`flex-1 py-2 rounded-xl text-xs font-bold transition ${
-                      isActive
-                        ? 'bg-emerald-500/20 text-emerald-400 cursor-default'
-                        : 'bg-sky-500 hover:bg-sky-400 text-slate-950'
-                    }`}
-                  >
-                    {isActive ? 'Connected' : 'Apply DNS'}
-                  </button>
-                </div>
+                <button
+                  onClick={() => onApplyServer(s)}
+                  disabled={busy || isActive}
+                  className={`btn-press w-full py-2 rounded-xl text-xs font-bold ${
+                    isActive
+                      ? 'bg-emerald-500/20 text-emerald-400 cursor-default'
+                      : 'bg-sky-500 hover:bg-sky-400 text-slate-950 shadow-md shadow-sky-500/15'
+                  }`}
+                >
+                  {isActive ? 'Connected' : 'Apply DNS'}
+                </button>
               </div>
             );
           })}

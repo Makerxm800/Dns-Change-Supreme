@@ -40,7 +40,7 @@ export const ToastContainer: React.FC<Props> = ({ toasts, onDismiss }) => {
         return (
           <div
             key={t.id}
-            className={`pointer-events-auto flex items-start gap-3 rounded-xl border px-4 py-3 shadow-2xl backdrop-blur-md transition-all ${colors}`}
+            className={`animate-toast-slide pointer-events-auto flex items-start gap-3 rounded-xl border px-4 py-3 shadow-2xl backdrop-blur-md transition-all ${colors}`}
           >
             <Icon className="w-5 h-5 shrink-0 mt-0.5" />
             <div className="flex-1 min-w-0">
@@ -49,7 +49,7 @@ export const ToastContainer: React.FC<Props> = ({ toasts, onDismiss }) => {
             </div>
             <button
               onClick={() => onDismiss(t.id)}
-              className="opacity-70 hover:opacity-100 p-0.5 rounded"
+              className="opacity-70 hover:opacity-100 p-0.5 rounded transition active:scale-90"
               aria-label="Dismiss notification"
             >
               <X className="w-4 h-4" />

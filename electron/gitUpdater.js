@@ -28,7 +28,7 @@ function fetchJson(url) {
       {
         ...(ca ? { ca } : {}),
         headers: {
-          'User-Agent': 'DNS-Change-Supreme-Updater/2.0',
+          'User-Agent': 'DNS-Changer-Pro-Updater/2.1',
           Accept: 'application/vnd.github+json',
         },
         timeout: 12000,
@@ -42,7 +42,7 @@ function fetchJson(url) {
           if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
             try {
               resolve(JSON.parse(data));
-            } catch (e) {
+            } catch {
               reject(new Error('Invalid JSON from GitHub API'));
             }
           } else {
@@ -60,6 +60,71 @@ function fetchJson(url) {
   });
 }
 
+export function downloadFileWithRedirects(url, destPath, onProgress, maxRedirects = 6) {
+  return new Promise((resolve, reject) => {
+    const ca = getCombinedCa();
+    const request = (currentUrl, redirectsLeft) => {
+      const req = https.get(
+        currentUrl,
+        {
+          ...(ca ? { ca } : {}),
+          headers: { 'User-Agent': 'DNS-Changer-Pro-Updater/2.1' },
+          timeout: 30000,
+        },
+        (res) => {
+          if (res.statusCode && [301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location) {
+            res.resume();
+            if (redirectsLeft <= 0) {
+              reject(new Error('Too many redirects while downloading update'));
+              return;
+            }
+            const nextUrl = new URL(res.headers.location, currentUrl).toString();
+            request(nextUrl, redirectsLeft - 1);
+            return;
+          }
+
+          if (!res.statusCode || res.statusCode < 200 || res.statusCode >= 300) {
+            res.resume();
+            reject(new Error(`Download failed with HTTP ${res.statusCode}`));
+            return;
+          }
+
+          const totalBytes = Number(res.headers['content-length'] || 0);
+          let downloadedBytes = 0;
+          fs.mkdirSync(path.dirname(destPath), { recursive: true });
+          const fileStream = fs.createWriteStream(destPath);
+
+          res.on('data', (chunk) => {
+            downloadedBytes += chunk.length;
+            if (onProgress) {
+              const percent = totalBytes > 0 ? Math.min(100, Math.round((downloadedBytes / totalBytes) * 100)) : null;
+              onProgress({ downloadedBytes, totalBytes, percent });
+            }
+          });
+
+          res.pipe(fileStream);
+
+          fileStream.on('finish', () => {
+            fileStream.close(() => resolve({ ok: true, filePath: destPath, size: downloadedBytes }));
+          });
+
+          fileStream.on('error', (err) => {
+            try {
+              fs.unlinkSync(destPath);
+            } catch {}
+            reject(err);
+          });
+        }
+      );
+
+      req.on('timeout', () => req.destroy(new Error('Download timed out')));
+      req.on('error', reject);
+    };
+
+    request(url, maxRedirects);
+  });
+}
+
 export function compareSemver(a, b) {
   const pa = String(a || '0.0.0').replace(/^v/i, '').split('.').map((n) => parseInt(n, 10) || 0);
   const pb = String(b || '0.0.0').replace(/^v/i, '').split('.').map((n) => parseInt(n, 10) || 0);
@@ -71,7 +136,7 @@ export function compareSemver(a, b) {
 }
 
 export async function getLocalGitInfo(appRoot) {
-  let version = '2.0.0';
+  let version = '2.1.0';
   try {
     const pkg = JSON.parse(fs.readFileSync(path.join(appRoot, 'package.json'), 'utf8'));
     version = pkg.version || version;
@@ -100,9 +165,39 @@ export async function getLocalGitInfo(appRoot) {
   }
 }
 
+export function pickPlatformAsset(assets = [], platform = process.platform) {
+  if (!Array.isArray(assets) || assets.length === 0) return null;
+  const installers = assets.filter((a) => /\.(exe|dmg|zip|AppImage|deb)$/i.test(a.name));
+  if (installers.length === 0) return null;
+
+  if (platform === 'win32') {
+    return (
+      installers.find((a) => /setup.*\.exe$/i.test(a.name)) ||
+      installers.find((a) => /\.exe$/i.test(a.name)) ||
+      null
+    );
+  }
+  if (platform === 'darwin') {
+    const archHint = process.arch === 'arm64' ? 'arm64' : 'x64';
+    return (
+      installers.find((a) => a.name.toLowerCase().includes(archHint) && /\.dmg$/i.test(a.name)) ||
+      installers.find((a) => /\.dmg$/i.test(a.name)) ||
+      installers.find((a) => a.name.toLowerCase().includes(archHint) && /\.zip$/i.test(a.name)) ||
+      installers.find((a) => /\.zip$/i.test(a.name)) ||
+      null
+    );
+  }
+  return (
+    installers.find((a) => /\.(AppImage|deb)$/i.test(a.name)) ||
+    installers.find((a) => /setup.*\.exe$/i.test(a.name)) ||
+    installers[0] ||
+    null
+  );
+}
+
 export async function checkForGitUpdates({
   owner = 'Makerxm800',
-  repo = 'Dns-Change-Supreme',
+  repo = 'Dns-Changer-Pro',
   branch = 'main',
   appRoot = process.cwd(),
 } = {}) {
@@ -111,18 +206,18 @@ export async function checkForGitUpdates({
   const safeRepo = encodeURIComponent(repo.trim());
   const safeBranch = encodeURIComponent(branch.trim());
 
-  const commitsUrl = `https://api.github.com/repos/${safeOwner}/${safeRepo}/commits?sha=${safeBranch}&per_page=6`;
+  const commitsUrl = `https://api.github.com/repos/${safeOwner}/${safeRepo}/commits?sha=${safeBranch}&per_page=5`;
   const releaseUrl = `https://api.github.com/repos/${safeOwner}/${safeRepo}/releases/latest`;
 
-  const [commitsResult, releaseResult] = await Promise.allSettled([
-    fetchJson(commitsUrl),
+  const [releaseResult, commitsResult] = await Promise.allSettled([
     fetchJson(releaseUrl),
+    fetchJson(commitsUrl),
   ]);
 
-  if (commitsResult.status === 'rejected') {
+  if (releaseResult.status === 'rejected' && commitsResult.status === 'rejected') {
     return {
       ok: false,
-      error: commitsResult.reason?.message || 'Unable to reach GitHub API',
+      error: releaseResult.reason?.message || commitsResult.reason?.message || 'Unable to reach update server',
       ...local,
       owner,
       repo,
@@ -131,33 +226,36 @@ export async function checkForGitUpdates({
     };
   }
 
-  const commits = Array.isArray(commitsResult.value) ? commitsResult.value : [];
-  const latest = commits[0] || null;
-  const remoteSha = latest?.sha || null;
-
   let latestRelease = null;
   if (releaseResult.status === 'fulfilled' && releaseResult.value) {
     const rel = releaseResult.value;
+    const assets = Array.isArray(rel.assets)
+      ? rel.assets.map((a) => ({
+          name: a.name,
+          size: a.size,
+          downloadUrl: a.browser_download_url,
+        }))
+      : [];
     latestRelease = {
       tagName: rel.tag_name,
       name: rel.name || rel.tag_name,
       publishedAt: rel.published_at,
       htmlUrl: rel.html_url,
       body: rel.body || '',
-      assets: Array.isArray(rel.assets)
-        ? rel.assets.map((a) => ({
-            name: a.name,
-            size: a.size,
-            downloadUrl: a.browser_download_url,
-          }))
-        : [],
+      assets,
+      recommendedAsset: pickPlatformAsset(assets),
     };
   }
 
-  const hasNewRelease = latestRelease ? compareSemver(latestRelease.tagName, local.version) > 0 : false;
-  const hasNewCommit = Boolean(remoteSha && local.localSha && remoteSha !== local.localSha);
+  const commits = commitsResult.status === 'fulfilled' && Array.isArray(commitsResult.value)
+    ? commitsResult.value
+    : [];
+  const latest = commits[0] || null;
+  const remoteSha = latest?.sha || null;
 
-  // Check if local repo already contains remoteSha (i.e. local branch is ahead/diverged)
+  const hasNewRelease = latestRelease ? compareSemver(latestRelease.tagName, local.version) > 0 : false;
+  const hasNewCommit = Boolean(local.isGitRepo && remoteSha && local.localSha && remoteSha !== local.localSha);
+
   let localContainsRemote = false;
   if (local.isGitRepo && remoteSha) {
     try {
@@ -171,7 +269,10 @@ export async function checkForGitUpdates({
     }
   }
 
-  const updateAvailable = hasNewRelease || (hasNewCommit && !localContainsRemote);
+  // Compare release semver cleanly so newer local builds never falsely show an older release as an update
+  const updateAvailable = latestRelease
+    ? hasNewRelease
+    : Boolean(local.isGitRepo && hasNewCommit && !localContainsRemote);
 
   return {
     ok: true,
@@ -182,18 +283,19 @@ export async function checkForGitUpdates({
     remoteSha,
     remoteShortSha: remoteSha ? remoteSha.slice(0, 7) : null,
     remoteCommitMessage: latest?.commit?.message || '',
-    remoteAuthor: latest?.commit?.author?.name || latest?.author?.login || 'Unknown',
+    remoteAuthor: latest?.commit?.author?.name || latest?.author?.login || '',
     remoteDate: latest?.commit?.author?.date || null,
-    remoteUrl: latest?.html_url || `https://github.com/${owner}/${repo}`,
+    remoteUrl: latestRelease?.htmlUrl || latest?.html_url || `https://github.com/${owner}/${repo}/releases`,
     recentCommits: commits.map((c) => ({
       sha: c.sha,
       shortSha: c.sha.slice(0, 7),
       message: String(c.commit?.message || '').split('\n')[0],
-      author: c.commit?.author?.name || c.author?.login || 'Author',
+      author: c.commit?.author?.name || c.author?.login || '',
       date: c.commit?.author?.date || '',
       url: c.html_url,
     })),
     latestRelease,
+    latestVersion: latestRelease?.tagName || `v${local.version}`,
     hasNewRelease,
     hasNewCommit,
     localContainsRemote,
@@ -204,20 +306,20 @@ export async function checkForGitUpdates({
 
 export async function applyGitUpdate({
   owner = 'Makerxm800',
-  repo = 'Dns-Change-Supreme',
+  repo = 'Dns-Changer-Pro',
   branch = 'main',
   appRoot = process.cwd(),
+  downloadsDir,
+  onProgress,
 } = {}) {
   const status = await checkForGitUpdates({ owner, repo, branch, appRoot });
   if (!status.ok) {
-    throw new Error(status.error || 'Failed to check GitHub updates');
+    throw new Error(status.error || 'Failed to check for updates');
   }
 
   if (status.isGitRepo) {
     const safeBranch = branch.replace(/[^a-zA-Z0-9._/-]/g, '');
     const logs = [];
-
-    // Fetch latest from remote
     const repoUrl = `https://github.com/${owner}/${repo}.git`;
     try {
       const { stdout, stderr } = await execFileAsync('git', ['fetch', repoUrl, safeBranch], {
@@ -234,7 +336,7 @@ export async function applyGitUpdate({
       return {
         ok: false,
         needsCleanTree: true,
-        message: 'Local workspace has uncommitted changes. Commit or stash your local changes before pulling from git.',
+        message: 'Local workspace has uncommitted changes. Commit or stash changes before updating.',
         logs,
         status,
       };
@@ -255,35 +357,49 @@ export async function applyGitUpdate({
         method: 'git-pull',
         message:
           updatedLocal.localSha !== status.localSha
-            ? `Updated to latest commit ${updatedLocal.localSha?.slice(0, 7)}. Restart app to load updated files.`
-            : 'Already up to date with latest Git commit.',
+            ? `Updated to latest version (${updatedLocal.localSha?.slice(0, 7)}). Reload the app to apply changes.`
+            : 'Already on the latest version.',
         logs,
         newSha: updatedLocal.localSha,
       };
     } catch (err) {
       return {
         ok: false,
-        message: `Fast-forward pull skipped (${err.message}). Your branch may have local commits ahead of ${owner}/${repo}:${safeBranch}.`,
+        message: `Fast-forward pull skipped (${err.message}).`,
         logs,
         status,
       };
     }
   }
 
-  // Packaged app mode: point to release asset or tarball
-  const platformExt = process.platform === 'win32' ? '.exe' : process.platform === 'darwin' ? '.dmg' : '.zip';
-  const matchingAsset = status.latestRelease?.assets?.find((a) => a.name.toLowerCase().endsWith(platformExt));
+  // Packaged .exe / .dmg mode: download installer directly if downloadsDir is supplied
+  const asset = status.latestRelease?.recommendedAsset;
+  if (asset && downloadsDir) {
+    const destPath = path.join(downloadsDir, asset.name);
+    const dl = await downloadFileWithRedirects(asset.downloadUrl, destPath, onProgress);
+    return {
+      ok: true,
+      updated: true,
+      method: 'installer-downloaded',
+      filePath: dl.filePath,
+      fileName: asset.name,
+      downloadUrl: asset.downloadUrl,
+      message: `Downloaded ${asset.name}. Launching installer now...`,
+      status,
+    };
+  }
+
   return {
     ok: true,
     updated: false,
     method: 'release-link',
     downloadUrl:
-      matchingAsset?.downloadUrl ||
+      asset?.downloadUrl ||
       status.latestRelease?.htmlUrl ||
-      `https://github.com/${owner}/${repo}/archive/refs/heads/${branch}.zip`,
-    message: matchingAsset
-      ? `Latest installer (${matchingAsset.name}) is ready to download from GitHub Releases.`
-      : `Latest source archive for ${owner}/${repo} (${branch}) is ready on GitHub.`,
+      `https://github.com/${owner}/${repo}/releases/latest`,
+    message: asset
+      ? `Latest installer (${asset.name}) is ready to download.`
+      : `Latest release page is ready.`,
     status,
   };
 }

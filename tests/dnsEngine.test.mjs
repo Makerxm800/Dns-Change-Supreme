@@ -84,7 +84,7 @@ test('settingsStore persists settings and logs accurately', () => {
   fs.rmSync(tmpDir, { recursive: true, force: true });
 });
 
-test('gitUpdater compares semver and checks Makerxm800/Dns-Change-Supreme', async () => {
+test('gitUpdater compares semver and checks Makerxm800/Dns-Changer-Pro', async () => {
   assert.equal(compareSemver('v2.1.0', '2.0.0'), 1);
   assert.equal(compareSemver('2.0.0', '2.0.0'), 0);
   assert.equal(compareSemver('1.9.5', '2.0.0'), -1);
@@ -95,17 +95,17 @@ test('gitUpdater compares semver and checks Makerxm800/Dns-Change-Supreme', asyn
 
   const remote = await checkForGitUpdates({
     owner: 'Makerxm800',
-    repo: 'Dns-Change-Supreme',
+    repo: 'Dns-Changer-Pro',
     branch: 'main',
     appRoot: process.cwd(),
   });
+  assert.equal(remote.version, '2.1.0');
   if (remote.ok) {
-    assert.ok(remote.remoteSha);
-    assert.ok(remote.recentCommits.length >= 1);
+    assert.ok(remote.latestVersion);
+    assert.equal(typeof remote.updateAvailable, 'boolean');
   } else {
     // Allow unauthenticated GitHub API rate-limit in CI runners while ensuring clean structured fallback
     assert.equal(typeof remote.error, 'string');
-    assert.equal(remote.localSha, local.localSha);
   }
 });
 

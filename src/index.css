@@ -8,18 +8,27 @@
   }
 }
 
+@layer utilities {
+  .btn-press {
+    @apply transition-all duration-200 ease-out active:scale-[0.96] hover:-translate-y-0.5;
+  }
+  .card-hover {
+    @apply transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-xl hover:shadow-sky-500/10;
+  }
+}
+
 /* Clean custom scrollbars */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.4);
+  background: rgba(15, 23, 42, 0.35);
 }
 ::-webkit-scrollbar-thumb {
   background: rgba(100, 116, 139, 0.45);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(56, 189, 248, 0.6);
+  background: rgba(56, 189, 248, 0.65);
 }

@@ -16,6 +16,11 @@ contextBridge.exposeInMainWorld('dnsApi', {
   appendLog: (entry) => ipcRenderer.invoke('store:append-log', entry),
   checkGitUpdates: (opts) => ipcRenderer.invoke('git:check-updates', opts),
   applyGitUpdate: (opts) => ipcRenderer.invoke('git:apply-update', opts),
+  onUpdateProgress: (cb) => {
+    const handler = (_e, data) => cb(data);
+    ipcRenderer.on('git:update-progress', handler);
+    return () => ipcRenderer.removeListener('git:update-progress', handler);
+  },
   openExternal: (url) => ipcRenderer.invoke('app:open-external', url),
   relaunchApp: () => ipcRenderer.invoke('app:relaunch'),
 });
