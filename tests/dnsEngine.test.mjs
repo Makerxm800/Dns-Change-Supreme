@@ -3,8 +3,6 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import http from 'node:http';
-
 import {
   buildDnsQueryPacket,
   isValidIPv4,
@@ -12,10 +10,12 @@ import {
   isValidIp,
   applyDnsConfiguration,
   resetDnsToDhcp,
+  getSystemPlatformInfo,
+  listNetworkAdapters,
+  flushOsDnsCache,
 } from '../electron/dnsEngine.js';
 import { createStore, DEFAULT_SETTINGS } from '../electron/settingsStore.js';
 import { compareSemver, getLocalGitInfo, checkForGitUpdates } from '../electron/gitUpdater.js';
-import { createApiServer } from '../server/apiServer.js';
 
 test('IPv4 and IPv6 validators accept valid IPs and reject unsafe inputs', () => {
   assert.equal(isValidIPv4('1.1.1.1'), true);
@@ -125,48 +125,40 @@ test('DNS apply and reset reject bad IPs and succeed with valid IPs', async () =
   assert.equal(reset.ok, true);
 });
 
-test('Express API server handles state, DNS switch, settings, and git check', async () => {
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dns-supreme-api-'));
-  const app = createApiServer({ storeDir: tmpDir });
-  const server = http.createServer(app);
-  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
-  const { port } = server.address();
-  const base = `http://127.0.0.1:${port}`;
-
+test('Desktop engine and preload bridge expose complete platform, adapter, and store lifecycle', async () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dns-pro-desktop-'));
   try {
-    const platRes = await fetch(`${base}/api/platform`);
-    assert.equal(platRes.status, 200);
-    const plat = await platRes.json();
+    const plat = await getSystemPlatformInfo();
     assert.ok(plat.platform);
+    assert.ok(plat.osLabel);
 
-    const applyRes = await fetch(`${base}/api/dns/apply`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        id: 'quad9-sec',
-        name: 'Quad9 Security',
-        primary: '9.9.9.9',
-        secondary: '149.112.112.112',
-      }),
+    const adaptersRes = await listNetworkAdapters();
+    assert.equal(adaptersRes.ok, true);
+    assert.ok(Array.isArray(adaptersRes.adapters));
+    assert.ok(adaptersRes.adapters.length >= 1);
+
+    const store = createStore(tmpDir);
+    const applied = await applyDnsConfiguration({
+      id: 'quad9-sec',
+      name: 'Quad9 Security',
+      primary: '9.9.9.9',
+      secondary: '149.112.112.112',
     });
-    assert.equal(applyRes.status, 200);
-    const applyJson = await applyRes.json();
-    assert.equal(applyJson.ok, true);
+    assert.equal(applied.ok, true);
 
-    const stRes = await fetch(`${base}/api/state`);
-    const stJson = await stRes.json();
-    assert.equal(stJson.activeServerId, 'quad9-sec');
+    const state = store.load();
+    state.activeServerId = 'quad9-sec';
+    store.save(state);
+    assert.equal(store.load().activeServerId, 'quad9-sec');
 
-    const patchRes = await fetch(`${base}/api/settings`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ theme: 'light', launchOnStartup: true }),
-    });
-    const patchJson = await patchRes.json();
-    assert.equal(patchJson.settings.theme, 'light');
-    assert.equal(patchJson.settings.launchOnStartup, true);
+    const flushed = await flushOsDnsCache();
+    assert.equal(flushed.ok, true);
+
+    const preloadSource = fs.readFileSync(path.resolve('electron/preload.cjs'), 'utf8');
+    for (const method of ['getPlatformInfo', 'getAdapters', 'applyDns', 'resetDns', 'onUpdateProgress']) {
+      assert.ok(preloadSource.includes(method), `Missing preload method: ${method}`);
+    }
   } finally {
-    await new Promise((resolve) => server.close(resolve));
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
 });

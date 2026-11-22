@@ -467,7 +467,7 @@ export async function getSystemPlatformInfo() {
       ? 'Windows'
       : platform === 'darwin'
         ? 'macOS'
-        : 'Linux / Web Preview';
+        : 'Linux';
   const isNativeSupported = platform === 'win32' || platform === 'darwin';
   let isAdmin = false;
   if (platform === 'win32') {
@@ -483,7 +483,7 @@ export async function getSystemPlatformInfo() {
     release: os.release(),
     isNativeSupported,
     isAdmin,
-    mode: isNativeSupported ? 'native' : 'sandbox-preview',
+    mode: isNativeSupported ? 'native' : 'simulation',
   };
 }
 

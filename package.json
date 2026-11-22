@@ -2,7 +2,7 @@
   "name": "dns-changer-pro",
   "version": "2.1.0",
   "type": "module",
-  "description": "DNS Changer Pro — Cross-platform Windows & macOS DNS Changer with All-Region Free DNS Servers, Real Country Flags, Live Latency Benchmark, Improved System Settings, and Seamless Auto-Updater.",
+  "description": "DNS Changer Pro — Cross-platform Windows & macOS Desktop DNS Changer with All-Region Free DNS Servers, Real Country Flags, Live Latency Benchmark, Unified System Settings, and In-App Auto-Updater.",
   "main": "electron/main.js",
   "author": "DNS Changer Pro",
   "license": "MIT",
@@ -11,26 +11,22 @@
     "url": "https://github.com/Makerxm800/Dns-Changer-Pro.git"
   },
   "scripts": {
-    "dev": "concurrently -k \"npm:dev:api\" \"npm:dev:vite\"",
-    "dev:api": "node server/apiServer.js",
-    "dev:vite": "vite --host 0.0.0.0 --port 5173",
+    "dev": "concurrently -k \"npm:dev:vite\" \"wait-on http://localhost:5173 && electron .\"",
+    "dev:vite": "vite --port 5173",
     "electron:dev": "concurrently -k \"npm:dev:vite\" \"wait-on http://localhost:5173 && electron .\"",
     "build": "vite build",
     "build:win": "vite build && electron-builder --win --publish never",
     "build:mac": "vite build && electron-builder --mac --publish never",
     "build:all": "vite build && electron-builder --win --mac --publish never",
-    "preview": "node server/apiServer.js --serve-dist",
     "test": "node --test tests/dnsEngine.test.mjs"
   },
   "dependencies": {
     "country-flag-icons": "^1.5.21",
-    "express": "^4.21.2",
     "lucide-react": "^0.475.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
-    "@types/express": "^5.0.0",
     "@types/node": "^22.10.2",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
