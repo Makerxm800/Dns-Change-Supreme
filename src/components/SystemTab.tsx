@@ -68,7 +68,7 @@ export const SystemTab: React.FC<SystemTabProps> = ({
     : 'bg-slate-950 border-slate-700 text-slate-100';
 
   return (
-    <div className="space-y-5">
+    <div className="animate-tab-enter space-y-5">
       {/* Top System Controls */}
       <div className={`rounded-2xl border p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 ${surfaceCls}`}>
         <div>

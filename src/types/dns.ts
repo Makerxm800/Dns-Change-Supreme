@@ -145,10 +145,18 @@ export interface GitUpdateCheckResult {
     htmlUrl: string;
     body: string;
     assets: Array<{ name: string; size: number; downloadUrl: string }>;
+    recommendedAsset?: { name: string; size: number; downloadUrl: string } | null;
   } | null;
+  latestVersion?: string;
   hasNewRelease: boolean;
   hasNewCommit: boolean;
   localContainsRemote: boolean;
   updateAvailable: boolean;
   checkedAt: string;
+}
+
+export interface UpdateDownloadProgress {
+  downloadedBytes: number;
+  totalBytes: number;
+  percent: number | null;
 }

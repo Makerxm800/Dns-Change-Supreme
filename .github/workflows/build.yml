@@ -50,15 +50,15 @@ jobs:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
         run: |
           npm run build
-          npx electron-builder --mac zip --publish never
-          if ! npx electron-builder --mac dmg --publish never; then
+          npx electron-builder --mac zip --x64 --arm64 --publish never
+          if ! npx electron-builder --mac dmg --x64 --arm64 --publish never; then
             echo "Falling back to native hdiutil DMG packaging..."
             VERSION=$(node -p "require('./package.json').version")
-            if [ -d "release/mac-arm64/DNS Change Supreme.app" ]; then
-              hdiutil create -volname "DNS Change Supreme" -srcfolder "release/mac-arm64/DNS Change Supreme.app" -ov -format UDZO "release/DNS-Change-Supreme-${VERSION}-arm64.dmg"
+            if [ -d "release/mac-arm64/DNS Changer Pro.app" ]; then
+              hdiutil create -volname "DNS Changer Pro" -srcfolder "release/mac-arm64/DNS Changer Pro.app" -ov -format UDZO "release/DNS-Changer-Pro-${VERSION}-arm64.dmg"
             fi
-            if [ -d "release/mac/DNS Change Supreme.app" ]; then
-              hdiutil create -volname "DNS Change Supreme" -srcfolder "release/mac/DNS Change Supreme.app" -ov -format UDZO "release/DNS-Change-Supreme-${VERSION}-x64.dmg"
+            if [ -d "release/mac/DNS Changer Pro.app" ]; then
+              hdiutil create -volname "DNS Changer Pro" -srcfolder "release/mac/DNS Changer Pro.app" -ov -format UDZO "release/DNS-Changer-Pro-${VERSION}-x64.dmg"
             fi
           fi
           ls -lh release/
@@ -96,6 +96,6 @@ jobs:
           else
             gh release create "$TAG" release-files/* \
               --target "${{ github.sha }}" \
-              --title "DNS Change Supreme ${TAG}" \
-              --notes "Automated release of **DNS Change Supreme ${TAG}** for Windows (\`.exe\` Setup + Portable) and macOS (\`.dmg\` + \`.zip\`)."
+              --title "DNS Changer Pro ${TAG}" \
+              --notes "Automated release of **DNS Changer Pro ${TAG}** for Windows (\`.exe\` Setup + Portable) and macOS (\`.dmg\` + \`.zip\` for Apple Silicon & Intel)."
           fi

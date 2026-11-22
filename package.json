@@ -1,14 +1,14 @@
 {
-  "name": "dns-change-supreme",
-  "version": "2.0.0",
+  "name": "dns-changer-pro",
+  "version": "2.1.0",
   "type": "module",
-  "description": "DNS Change Supreme — Cross-platform Windows & macOS DNS Changer with All-Region Free DNS Servers, Real Country Flags, Live Latency Benchmark, Improved System Settings, and Git Auto-Updater.",
+  "description": "DNS Changer Pro — Cross-platform Windows & macOS DNS Changer with All-Region Free DNS Servers, Real Country Flags, Live Latency Benchmark, Improved System Settings, and Seamless Auto-Updater.",
   "main": "electron/main.js",
-  "author": "Makerxm800",
+  "author": "DNS Changer Pro",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Makerxm800/Dns-Change-Supreme.git"
+    "url": "https://github.com/Makerxm800/Dns-Changer-Pro.git"
   },
   "scripts": {
     "dev": "concurrently -k \"npm:dev:api\" \"npm:dev:vite\"",

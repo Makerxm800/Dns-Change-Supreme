@@ -257,11 +257,13 @@ async function runWindowsPowerShell(script, requireAdmin = false) {
 
 async function getWindowsAdapters() {
   const ps = `
-    $adapters = Get-NetAdapter | Where-Object { $_.Virtual -eq $false -or $_.Status -eq 'Up' } | Select-Object Name, InterfaceDescription, Status, MacAddress, MediaType
-    $ipv4 = Get-DnsClientServerAddress -AddressFamily IPv4 | Select-Object InterfaceAlias, ServerAddresses
-    $ipv6 = Get-DnsClientServerAddress -AddressFamily IPv6 | Select-Object InterfaceAlias, ServerAddresses
-    $ips = Get-NetIPAddress -AddressFamily IPv4 | Select-Object InterfaceAlias, IPAddress, PrefixOrigin
+    $defaultRoute = Get-NetRoute -DestinationPrefix '0.0.0.0/0' -ErrorAction SilentlyContinue | Sort-Object RouteMetric | Select-Object -First 1
+    $adapters = Get-NetAdapter -ErrorAction SilentlyContinue | Where-Object { $_.Virtual -eq $false -or $_.Status -eq 'Up' } | Select-Object Name, InterfaceDescription, InterfaceIndex, @{Name='StatusStr';Expression={$_.Status.ToString()}}, MacAddress, @{Name='MediaTypeStr';Expression={$_.MediaType.ToString()}}
+    $ipv4 = Get-DnsClientServerAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue | Select-Object InterfaceAlias, ServerAddresses
+    $ipv6 = Get-DnsClientServerAddress -AddressFamily IPv6 -ErrorAction SilentlyContinue | Select-Object InterfaceAlias, ServerAddresses
+    $ips = Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue | Select-Object InterfaceAlias, IPAddress, PrefixOrigin
     [PSCustomObject]@{
+      defaultIfIndex = if ($defaultRoute) { $defaultRoute.InterfaceIndex } else { $null }
       adapters = @($adapters)
       ipv4 = @($ipv4)
       ipv6 = @($ipv6)
@@ -274,15 +276,23 @@ async function getWindowsAdapters() {
   const ipv4List = Array.isArray(parsed.ipv4) ? parsed.ipv4 : [];
   const ipv6List = Array.isArray(parsed.ipv6) ? parsed.ipv6 : [];
   const ipList = Array.isArray(parsed.ips) ? parsed.ips : [];
+  const defaultIfIndex = parsed.defaultIfIndex;
 
-  return adapters.map((a, idx) => {
+  const mapped = adapters.map((a) => {
     const d4 = ipv4List.find((x) => x.InterfaceAlias === a.Name);
     const d6 = ipv6List.find((x) => x.InterfaceAlias === a.Name);
     const ipObj = ipList.find((x) => x.InterfaceAlias === a.Name && !String(x.IPAddress).startsWith('169.254'));
-    const dns4 = Array.isArray(d4?.ServerAddresses) ? d4.ServerAddresses : [];
-    const dns6 = Array.isArray(d6?.ServerAddresses) ? d6.ServerAddresses : [];
-    const statusStr = String(a.Status || '').toLowerCase() === 'up' ? 'Connected' : 'Disconnected';
-    const isWifi = /wi-?fi|wireless|802\.11/i.test(`${a.Name} ${a.InterfaceDescription} ${a.MediaType}`);
+    const dns4Raw = d4?.ServerAddresses;
+    const dns6Raw = d6?.ServerAddresses;
+    const dns4 = Array.isArray(dns4Raw) ? dns4Raw : dns4Raw ? [String(dns4Raw)] : [];
+    const dns6 = Array.isArray(dns6Raw) ? dns6Raw : dns6Raw ? [String(dns6Raw)] : [];
+
+    const rawStatus = String(a.StatusStr ?? a.Status ?? '').toLowerCase();
+    const isConnected = rawStatus === 'up' || rawStatus === 'connected' || rawStatus === '2';
+    const statusStr = isConnected ? 'Connected' : 'Disconnected';
+    const isWifi = /wi-?fi|wireless|802\.11|wlan|native80211/i.test(
+      `${a.Name} ${a.InterfaceDescription} ${a.MediaTypeStr || a.MediaType || ''}`
+    );
     return {
       name: a.Name,
       description: a.InterfaceDescription || a.Name,
@@ -293,9 +303,17 @@ async function getWindowsAdapters() {
       dnsServers: dns4,
       ipv6DnsServers: dns6,
       isDhcp: dns4.length === 0,
-      isPrimary: statusStr === 'Connected' && idx === 0,
+      isPrimary: defaultIfIndex != null ? a.InterfaceIndex === defaultIfIndex : false,
     };
   });
+
+  // Sort Connected adapters first, and guarantee one primary if any connected
+  mapped.sort((a, b) => Number(b.status === 'Connected') - Number(a.status === 'Connected'));
+  if (!mapped.some((a) => a.isPrimary)) {
+    const firstConn = mapped.find((a) => a.status === 'Connected');
+    if (firstConn) firstConn.isPrimary = true;
+  }
+  return mapped;
 }
 
 async function applyWindowsDns({ adapters, primary, secondary, ipv6Primary, ipv6Secondary, ipv6Mode, autoFlush }) {

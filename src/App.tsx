@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Home, Globe, Gauge, PlusCircle, Cpu, Settings as SettingsIcon } from 'lucide-react';
+import { Home, Globe, Gauge, PlusCircle, Cpu } from 'lucide-react';
 import { DNS_SERVERS } from './data/dnsServers';
 import type {
   AppSettings,
@@ -9,6 +9,7 @@ import type {
   GitUpdateCheckResult,
   NetworkAdapter,
   PlatformInfo,
+  UpdateDownloadProgress,
 } from './types/dns';
 import { bridge } from './services/bridge';
 import { Header } from './components/Header';
@@ -41,7 +42,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   showIpv6InList: true,
   defaultRegion: 'All',
   gitRepoOwner: 'Makerxm800',
-  gitRepoName: 'Dns-Change-Supreme',
+  gitRepoName: 'Dns-Changer-Pro',
   gitBranch: 'main',
   autoCheckUpdates: true,
 };
@@ -76,6 +77,7 @@ export default function App() {
   const [gitStatus, setGitStatus] = useState<GitUpdateCheckResult | null>(null);
   const [checkingUpdates, setCheckingUpdates] = useState(false);
   const [applyingUpdate, setApplyingUpdate] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState<UpdateDownloadProgress | null>(null);
   const [updateResultMessage, setUpdateResultMessage] = useState<string | null>(null);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
@@ -124,8 +126,8 @@ export default function App() {
       if (res.ok && res.updateAvailable) {
         addToast({
           type: 'info',
-          title: 'Git Update Available',
-          message: `Latest commit ${res.remoteShortSha}: ${res.remoteCommitMessage}`,
+          title: `Update ${res.latestVersion || ''} Available`,
+          message: 'Open Settings → App Updates to install the latest release.',
         });
       }
     } catch (err: any) {
@@ -135,9 +137,12 @@ export default function App() {
     }
   }, [addToast]);
 
-  // Initial load
+  // Initial load + update download progress listener
   useEffect(() => {
     let mounted = true;
+    const unsubscribe = bridge.onUpdateProgress((prog) => {
+      if (mounted) setDownloadProgress(prog);
+    });
     (async () => {
       const [pInfo, st] = await Promise.all([bridge.getPlatformInfo(), refreshState()]);
       if (!mounted) return;
@@ -149,6 +154,7 @@ export default function App() {
     })();
     return () => {
       mounted = false;
+      unsubscribe();
     };
   }, [refreshAdapters, refreshState, handleCheckUpdates]);
 
@@ -207,9 +213,6 @@ export default function App() {
   };
 
   const handleResetDns = async () => {
-    if (appState.settings.confirmBeforeReset && activeServer) {
-      // Non-blocking clean confirmation if needed, or proceed cleanly
-    }
     setBusy(true);
     try {
       await bridge.resetDns({
@@ -351,22 +354,23 @@ export default function App() {
 
   const handleApplyGitUpdate = async () => {
     setApplyingUpdate(true);
+    setDownloadProgress(null);
     setUpdateResultMessage(null);
     try {
       const res = await bridge.applyGitUpdate();
       setUpdateResultMessage(res.message);
       await refreshState();
-      if (res.downloadUrl) {
+      if (res.method === 'release-link' && res.downloadUrl) {
         bridge.openExternal(res.downloadUrl);
       }
       addToast({
         type: res.ok ? 'success' : 'warn',
-        title: res.updated ? 'Updated from Latest Git' : 'Git Update Status',
+        title: res.updated ? 'Update Ready' : 'Update Status',
         message: res.message,
       });
     } catch (err: any) {
       setUpdateResultMessage(err.message);
-      addToast({ type: 'error', title: 'Git Update Failed', message: err.message });
+      addToast({ type: 'error', title: 'Update Failed', message: err.message });
     } finally {
       setApplyingUpdate(false);
     }
@@ -387,7 +391,7 @@ export default function App() {
         : 'bg-slate-950 text-slate-100';
 
   return (
-    <div className={`min-h-screen flex flex-col transition-colors ${rootBg}`}>
+    <div className={`min-h-screen flex flex-col transition-colors duration-200 ${rootBg}`}>
       <Header
         platformInfo={platformInfo}
         activeServer={activeServer}
@@ -400,14 +404,14 @@ export default function App() {
         busy={busy}
       />
 
-      {/* Home Page Working Tab Bar */}
+      {/* Animated Home Page Tab Bar (Single clean Settings in header — no duplicate!) */}
       <div
         className={`border-b ${
           isLight ? 'bg-white/75 border-slate-200' : 'bg-slate-950/60 border-slate-800/80'
         }`}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between gap-2 overflow-x-auto">
-          <nav className="flex items-center gap-1 py-2" role="tablist" aria-label="Home Navigation Tabs">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center overflow-x-auto">
+          <nav className="flex items-center gap-1.5 py-2" role="tablist" aria-label="Home Navigation Tabs">
             {TABS.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
@@ -418,39 +422,38 @@ export default function App() {
                   aria-selected={isActive}
                   data-testid={`tab-${tab.id}`}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition ${
+                  className={`group relative inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all duration-200 ease-out active:scale-95 ${
                     isActive
-                      ? 'bg-sky-500/15 text-sky-400 border border-sky-500/35 shadow-sm'
+                      ? 'bg-sky-500/15 text-sky-400 border border-sky-500/35 shadow-sm shadow-sky-500/10'
                       : isLight
-                        ? 'text-slate-600 hover:bg-slate-200/70 border border-transparent'
-                        : 'text-slate-400 hover:text-slate-100 hover:bg-slate-900 border border-transparent'
+                        ? 'text-slate-600 hover:bg-slate-200/70 border border-transparent hover:-translate-y-0.5'
+                        : 'text-slate-400 hover:text-slate-100 hover:bg-slate-900 border border-transparent hover:-translate-y-0.5'
                   }`}
                 >
-                  <Icon className="w-4 h-4" />
+                  <Icon
+                    className={`w-4 h-4 transition-transform duration-200 ${
+                      isActive
+                        ? 'scale-110 text-sky-400'
+                        : 'group-hover:scale-110 group-hover:-rotate-6'
+                    }`}
+                  />
                   <span>{tab.label}</span>
                   {tab.id === 'servers' && (
-                    <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-800 text-slate-300">
+                    <span
+                      className={`px-1.5 py-0.2 rounded-full text-[10px] transition-colors ${
+                        isActive ? 'bg-sky-500/25 text-sky-300' : 'bg-slate-800 text-slate-300'
+                      }`}
+                    >
                       {allServers.length}
                     </span>
+                  )}
+                  {isActive && (
+                    <span className="absolute bottom-0 left-3 right-3 h-[2px] rounded-full bg-sky-400 animate-fade-in" />
                   )}
                 </button>
               );
             })}
           </nav>
-
-          {/* Direct Settings Popup Tab Trigger */}
-          <button
-            onClick={() => openSettingsModal('general')}
-            data-testid="tab-bar-settings-popup-btn"
-            className={`hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition shrink-0 ${
-              isLight
-                ? 'border-slate-300 text-slate-700 hover:bg-slate-200'
-                : 'border-slate-800 text-slate-300 hover:bg-slate-800'
-            }`}
-          >
-            <SettingsIcon className="w-3.5 h-3.5 text-sky-400" />
-            Settings Popup
-          </button>
         </div>
       </div>
 
@@ -543,6 +546,7 @@ export default function App() {
         gitStatus={gitStatus}
         checkingUpdates={checkingUpdates}
         applyingUpdate={applyingUpdate}
+        downloadProgress={downloadProgress}
         updateResultMessage={updateResultMessage}
         onClose={() => setSettingsOpen(false)}
         onUpdateSettings={handleUpdateSettings}

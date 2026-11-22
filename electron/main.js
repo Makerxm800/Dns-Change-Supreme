@@ -30,6 +30,14 @@ function getStore() {
   return store;
 }
 
+function resolveAssetPath(...segments) {
+  const unpackedPath = path.join(process.resourcesPath || '', 'app.asar.unpacked', ...segments);
+  if (fs.existsSync(unpackedPath)) return unpackedPath;
+  const localPath = path.join(appRoot, ...segments);
+  if (fs.existsSync(localPath)) return localPath;
+  return localPath;
+}
+
 function syncStartupSetting(settings) {
   try {
     app.setLoginItemSettings({
@@ -46,7 +54,7 @@ function rebuildTrayMenu() {
   const st = getStore().load();
   const activeLabel = st.activeServerId ? `Active DNS: ${st.activeServerId}` : 'DNS: Default / DHCP';
   const menu = Menu.buildFromTemplate([
-    { label: 'DNS Change Supreme', enabled: false },
+    { label: 'DNS Changer Pro', enabled: false },
     { label: activeLabel, enabled: false },
     { type: 'separator' },
     {
@@ -76,7 +84,7 @@ function rebuildTrayMenu() {
     },
     { type: 'separator' },
     {
-      label: 'Quit DNS Change Supreme',
+      label: 'Quit DNS Changer Pro',
       click: () => {
         isQuitting = true;
         app.quit();
@@ -84,29 +92,26 @@ function rebuildTrayMenu() {
     },
   ]);
   tray.setContextMenu(menu);
-  tray.setToolTip(`DNS Change Supreme — ${activeLabel}`);
-}
-
-function resolveAssetPath(...segments) {
-  const unpackedPath = path.join(process.resourcesPath || '', 'app.asar.unpacked', ...segments);
-  if (fs.existsSync(unpackedPath)) return unpackedPath;
-  const localPath = path.join(appRoot, ...segments);
-  if (fs.existsSync(localPath)) return localPath;
-  return localPath;
+  tray.setToolTip(`DNS Changer Pro — ${activeLabel}`);
 }
 
 function createWindow() {
   const st = getStore().load();
   const iconPath = resolveAssetPath('build', 'icon.png');
 
+  if (process.platform !== 'darwin') {
+    Menu.setApplicationMenu(null);
+  }
+
   mainWindow = new BrowserWindow({
-    width: 1240,
-    height: 820,
+    width: 1260,
+    height: 830,
     minWidth: 960,
     minHeight: 660,
-    title: 'DNS Change Supreme',
+    title: 'DNS Changer Pro',
     icon: iconPath,
-    backgroundColor: '#090d16',
+    autoHideMenuBar: true,
+    backgroundColor: '#070b14',
     show: !st.settings.startMinimized,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
@@ -115,6 +120,8 @@ function createWindow() {
       sandbox: false,
     },
   });
+
+  mainWindow.setMenuBarVisibility(false);
 
   if (process.env.VITE_DEV_SERVER_URL || !app.isPackaged) {
     const devUrl = process.env.VITE_DEV_SERVER_URL || 'http://localhost:5173';
@@ -247,16 +254,26 @@ function registerIpc() {
 
   ipcMain.handle('git:apply-update', async (_e, opts = {}) => {
     const st = getStore().load().settings;
+    const downloadsDir = app.isPackaged ? app.getPath('downloads') : undefined;
     const res = await applyGitUpdate({
       owner: opts.owner || st.gitRepoOwner,
       repo: opts.repo || st.gitRepoName,
       branch: opts.branch || st.gitBranch,
       appRoot,
+      downloadsDir,
+      onProgress: (prog) => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('git:update-progress', prog);
+        }
+      },
     });
+    if (res.method === 'installer-downloaded' && res.filePath) {
+      await shell.openPath(res.filePath);
+    }
     getStore().appendLog({
       level: res.ok ? 'success' : 'warn',
-      action: 'GIT_UPDATE',
-      message: res.message || 'Checked Git update',
+      action: 'APP_UPDATE',
+      message: res.message || 'Checked app update',
     });
     return res;
   });

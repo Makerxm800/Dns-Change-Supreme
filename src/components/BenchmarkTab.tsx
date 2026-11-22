@@ -54,7 +54,7 @@ export const BenchmarkTab: React.FC<BenchmarkTabProps> = ({
     : 'bg-slate-900/75 border-slate-800 text-slate-100';
 
   return (
-    <div className="space-y-5">
+    <div className="animate-tab-enter space-y-5">
       {/* Control Header */}
       <div className={`rounded-2xl border p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 ${surfaceCls}`}>
         <div className="space-y-1">

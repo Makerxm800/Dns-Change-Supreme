@@ -135,7 +135,7 @@ export const CustomDnsTab: React.FC<CustomDnsTabProps> = ({
     : 'bg-slate-950 border-slate-700 text-slate-100';
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+    <div className="animate-tab-enter grid grid-cols-1 lg:grid-cols-12 gap-5">
       {/* Add/Edit Form */}
       <form
         onSubmit={handleSubmit}
