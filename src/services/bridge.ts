@@ -33,16 +33,11 @@ declare global {
   }
 }
 
-async function apiFetch<T>(url: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(url, {
-    headers: { 'Content-Type': 'application/json' },
-    ...options,
-  });
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data?.error || `Request failed (${res.status})`);
+function getElectronApi() {
+  if (typeof window !== 'undefined' && window.dnsApi) {
+    return window.dnsApi;
   }
-  return data as T;
+  throw new Error('DNS Changer Pro desktop bridge (window.dnsApi) is unavailable.');
 }
 
 export const bridge = {
@@ -51,13 +46,11 @@ export const bridge = {
   },
 
   async getPlatformInfo(): Promise<PlatformInfo> {
-    if (window.dnsApi) return window.dnsApi.getPlatformInfo();
-    return apiFetch<PlatformInfo>('/api/platform');
+    return getElectronApi().getPlatformInfo();
   },
 
   async getAdapters(): Promise<{ ok: boolean; mode: string; warning?: string; adapters: NetworkAdapter[] }> {
-    if (window.dnsApi) return window.dnsApi.getAdapters();
-    return apiFetch('/api/adapters');
+    return getElectronApi().getAdapters();
   },
 
   async applyDns(payload: {
@@ -71,89 +64,65 @@ export const bridge = {
     ipv6Mode?: string;
     autoFlush?: boolean;
   }) {
-    if (window.dnsApi) return window.dnsApi.applyDns(payload);
-    return apiFetch('/api/dns/apply', { method: 'POST', body: JSON.stringify(payload) });
+    return getElectronApi().applyDns(payload);
   },
 
   async resetDns(payload?: { adapters?: string[]; autoFlush?: boolean }) {
-    if (window.dnsApi) return window.dnsApi.resetDns(payload);
-    return apiFetch('/api/dns/reset', { method: 'POST', body: JSON.stringify(payload || {}) });
+    return getElectronApi().resetDns(payload);
   },
 
   async flushCache() {
-    if (window.dnsApi) return window.dnsApi.flushCache();
-    return apiFetch('/api/dns/flush', { method: 'POST' });
+    return getElectronApi().flushCache();
   },
 
   async pingServer(ip: string, domain?: string, timeoutMs?: number): Promise<DnsLatencyResult> {
-    if (window.dnsApi) return window.dnsApi.pingServer({ ip, domain, timeoutMs });
-    return apiFetch('/api/dns/ping', {
-      method: 'POST',
-      body: JSON.stringify({ ip, domain, timeoutMs }),
-    });
+    return getElectronApi().pingServer({ ip, domain, timeoutMs });
   },
 
   async pingBatch(ips: string[], domain?: string, timeoutMs?: number): Promise<DnsLatencyResult[]> {
-    if (window.dnsApi) return window.dnsApi.pingBatch({ ips, domain, timeoutMs });
-    const data = await apiFetch<{ ok: boolean; results: DnsLatencyResult[] }>('/api/dns/ping-batch', {
-      method: 'POST',
-      body: JSON.stringify({ ips, domain, timeoutMs }),
-    });
-    return data.results;
+    return getElectronApi().pingBatch({ ips, domain, timeoutMs });
   },
 
   async resolveDomain(domain: string, dnsIp?: string) {
-    if (window.dnsApi) return window.dnsApi.resolveDomain({ domain, dnsIp });
-    return apiFetch('/api/dns/resolve', {
-      method: 'POST',
-      body: JSON.stringify({ domain, dnsIp }),
-    });
+    return getElectronApi().resolveDomain({ domain, dnsIp });
   },
 
   async getState(): Promise<AppState> {
-    if (window.dnsApi) return window.dnsApi.getState();
-    return apiFetch('/api/state');
+    return getElectronApi().getState();
   },
 
   async saveState(state: AppState): Promise<AppState> {
-    if (window.dnsApi) return window.dnsApi.saveState(state);
-    return apiFetch('/api/state', { method: 'POST', body: JSON.stringify(state) });
+    return getElectronApi().saveState(state);
   },
 
   async updateSettings(partial: Partial<AppSettings>): Promise<AppState> {
-    if (window.dnsApi) return window.dnsApi.updateSettings(partial);
-    return apiFetch('/api/settings', { method: 'PATCH', body: JSON.stringify(partial) });
+    return getElectronApi().updateSettings(partial);
   },
 
   async appendLog(entry: Partial<LogEntry>): Promise<LogEntry> {
-    if (window.dnsApi) return window.dnsApi.appendLog(entry);
-    return apiFetch('/api/logs', { method: 'POST', body: JSON.stringify(entry) });
+    return getElectronApi().appendLog(entry);
   },
 
   async checkGitUpdates(opts?: { owner?: string; repo?: string; branch?: string }): Promise<GitUpdateCheckResult> {
-    if (window.dnsApi) return window.dnsApi.checkGitUpdates(opts);
-    return apiFetch('/api/git/check', { method: 'POST', body: JSON.stringify(opts || {}) });
+    return getElectronApi().checkGitUpdates(opts);
   },
 
   async applyGitUpdate(opts?: { owner?: string; repo?: string; branch?: string }) {
-    if (window.dnsApi) return window.dnsApi.applyGitUpdate(opts);
-    return apiFetch('/api/git/update', { method: 'POST', body: JSON.stringify(opts || {}) });
+    return getElectronApi().applyGitUpdate(opts);
   },
 
   onUpdateProgress(cb: (data: { downloadedBytes: number; totalBytes: number; percent: number | null }) => void): () => void {
-    if (window.dnsApi?.onUpdateProgress) {
+    if (typeof window !== 'undefined' && window.dnsApi?.onUpdateProgress) {
       return window.dnsApi.onUpdateProgress(cb);
     }
     return () => {};
   },
 
   async openExternal(url: string) {
-    if (window.dnsApi) return window.dnsApi.openExternal(url);
-    window.open(url, '_blank', 'noopener,noreferrer');
+    return getElectronApi().openExternal(url);
   },
 
   async relaunchApp() {
-    if (window.dnsApi) return window.dnsApi.relaunchApp();
-    window.location.reload();
+    return getElectronApi().relaunchApp();
   },
 };

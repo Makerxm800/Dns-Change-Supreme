@@ -110,7 +110,7 @@ export interface PlatformInfo {
   release: string;
   isNativeSupported: boolean;
   isAdmin: boolean;
-  mode: 'native' | 'sandbox-preview';
+  mode: 'native' | 'simulation';
 }
 
 export interface GitUpdateCheckResult {

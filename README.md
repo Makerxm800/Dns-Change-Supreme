@@ -50,17 +50,10 @@ Grab the latest installers from the **[GitHub Releases](../../releases)** page:
 - **Node.js** `20+` (tested on Node `22`)
 - **npm** `10+`
 
-### Run Locally (Web + API Preview)
+### Run Desktop App (Electron)
 ```bash
 npm install
 npm run dev
-```
-- Frontend UI: `http://localhost:5173`
-- Local Express API: `http://localhost:38420`
-
-### Run Desktop App (Electron)
-```bash
-npm run electron:dev
 ```
 
 ### Type-Check, Test & Build
@@ -89,12 +82,10 @@ npm run build:mac   # macOS DMG + ZIP (.dmg, .zip)
 │   ├── main.js                   # Electron window, tray, IPC & hidden menu bar
 │   ├── preload.cjs               # Secure contextBridge API (window.dnsApi)
 │   └── settingsStore.js          # Persistent JSON settings & audit logs (~/.dns-changer-pro)
-├── server/
-│   └── apiServer.js              # Express HTTP bridge for browser/dev preview
 ├── src/
 │   ├── components/               # Header, OverviewTab, ServersTab, BenchmarkTab, CustomDnsTab, SystemTab, SettingsModal, CountryFlag, ToastContainer
 │   ├── data/dnsServers.ts        # 57+ curated DNS presets across 6 world regions
-│   ├── services/bridge.ts        # Unified Electron IPC + HTTP API client
+│   ├── services/bridge.ts        # Electron IPC client (window.dnsApi)
 │   ├── types/dns.ts              # Shared TypeScript interfaces
 │   ├── App.tsx                   # Main app shell & animated tab navigation
 │   └── index.css                 # Tailwind CSS + hover/click animation utilities

@@ -79,9 +79,9 @@ export const Header: React.FC<HeaderProps> = ({
                 {osIcon}
                 {platformInfo?.osLabel || 'Detecting OS...'}
               </span>
-              {platformInfo?.mode === 'sandbox-preview' && (
+              {platformInfo?.mode === 'simulation' && (
                 <span className="px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-400 border border-amber-500/25 text-[10px]">
-                  Preview Mode
+                  Simulation Mode
                 </span>
               )}
             </div>
